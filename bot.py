@@ -9,7 +9,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_VERTICAL_ANCHOR
 from pptx.util import Pt, Inches
 
-API_TOKEN = "8042040626:AAHdxQnQJ8F14QOVRvb9-9bjdNvFqq4ZPJo"
+API_TOKEN = "ТВОЙ_ТОКЕН"  # заменишь на Railway через os.getenv потом
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,25 +33,26 @@ def transliterate(text: str) -> str:
     text = re.sub(r"[^a-z0-9\s]", "", text)
     return text.strip()
 
-def clean_text(line: str) -> str:
-    return re.sub(r"[^\w\sԱ-Ֆա-ֆA-Za-zА-Яа-яЁё0-9]", "", line).strip()
+# === Очистка строки: убираем только знаки препинания в конце ===
+def clean_line(line: str) -> str:
+    return line.rstrip(".,!?;:…").strip()
 
 def is_armenian(text: str) -> bool:
     return bool(re.search(r"[Ա-Ֆա-ֆ]", text))
 
-# === Подбор шрифта в зависимости от длины текста ===
-def get_font_size(line: str, is_title=False) -> Pt:
+# === Динамический подбор размера шрифта ===
+def get_dynamic_font_size(line: str, is_title=False) -> Pt:
     base_size = 120 if is_title else 100
     length = len(line)
 
     if length < 15:
-        return Pt(base_size)        # очень короткая строка → огромный шрифт
+        return Pt(base_size)
     elif length < 30:
-        return Pt(base_size - 20)   # средняя длина
+        return Pt(base_size - 20)
     elif length < 50:
-        return Pt(base_size - 40)   # длинная строка
+        return Pt(base_size - 40)
     else:
-        return Pt(base_size - 60)   # очень длинная строка
+        return Pt(base_size - 60)
 
 # === Создание презентации ===
 def create_presentation(text: str) -> (io.BytesIO, str):
@@ -61,7 +62,7 @@ def create_presentation(text: str) -> (io.BytesIO, str):
         prs.part.drop_rel(rId)
         del prs.slides._sldIdLst[0]
 
-    lines = [clean_text(line) for line in text.split("\n") if line.strip()]
+    lines = [clean_line(line) for line in text.split("\n") if line.strip()]
     if not lines:
         lines = ["ПУСТОЙ ТЕКСТ"]
 
@@ -88,16 +89,16 @@ def create_presentation(text: str) -> (io.BytesIO, str):
         p = tf.add_paragraph()
 
         if i == 0:  # заголовок
-            p.text = line.upper()
-            p.font.size = get_font_size(line, is_title=True)
+            p.text = line.upper()  # всегда большими буквами
+            p.font.size = get_dynamic_font_size(line, is_title=True)
         else:
             p.text = line
-            p.font.size = get_font_size(line, is_title=False)
+            p.font.size = get_dynamic_font_size(line, is_title=False)
 
         p.font.name = "Sylfaen"
         p.font.color.rgb = RGBColor(255, 255, 255)
         p.alignment = PP_ALIGN.CENTER
-        tf.word_wrap = True
+        tf.word_wrap = False  # не переносим строки, пусть будет в одну
         tf.vertical_anchor = MSO_VERTICAL_ANCHOR.TOP  # всегда сверху
 
     output = io.BytesIO()
@@ -105,10 +106,10 @@ def create_presentation(text: str) -> (io.BytesIO, str):
     output.seek(0)
     return output, filename
 
-# === Обработчики ===
+# === Хэндлеры ===
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
-    await message.answer("Привет 👋 Отправь мне текст.\nПервая строка будет заголовком (и именем файла).")
+    await message.answer("Привет 👋 Отправь мне текст.\nПервая строка = заголовок (в одну строку и имя файла).")
 
 @dp.message()
 async def create_pptx(message: types.Message):
