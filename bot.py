@@ -9,7 +9,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_VERTICAL_ANCHOR
 from pptx.util import Pt, Inches
 
-API_TOKEN = "ТВОЙ_ТОКЕН"  # заменишь на Railway через os.getenv потом
+API_TOKEN = "8042040626:AAHdxQnQJ8F14QOVRvb9-9bjdNvFqq4ZPJo"  # заменишь на Railway через os.getenv потом
 
 logging.basicConfig(level=logging.INFO)
 
